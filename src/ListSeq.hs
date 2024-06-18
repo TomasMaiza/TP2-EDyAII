@@ -9,8 +9,7 @@ singleton :: a -> [a]
 singleton x = [x]
 
 length' :: [a] -> Int
-length' [] = 0
-length' (x:xs) = length xs
+length' xs = length xs
 
 nth :: [a] -> Int -> a
 nth [] _ = error "Lista vacia o indice invalido"
@@ -22,8 +21,8 @@ tabulate f n | n < 0 = error "Argumento inválido"
              | otherwise = tabulate_aux f 0 n
                             where 
                               tabulate_aux f i m | i == m = []
-                                                 | otherwise = (f i) : (tabulate_aux f (i + 1) m)
-
+                                                 | otherwise = let (fx, rest) = (f i) ||| (tabulate_aux f (i + 1) m)
+                                                               in fx : rest
 map' :: (a -> b) -> [a] -> [b]
 map' f xs = map f xs
 
@@ -57,6 +56,7 @@ join :: [[a]] -> [a]
 join [] = []
 join (xs:xss) = append xs (join xss)
 
+{-
 data Tree a = Leaf a | Node (Tree a) (Tree a) deriving Show
 
 reduce :: (a -> a -> a) -> a -> [a] -> a
@@ -72,7 +72,16 @@ reduce f e xs = f e (reduceT f (toTree xs))
 
         reduceT f (Leaf x) = x
         reduceT f (Node l r) = let (l', r') = reduceT f l ||| reduceT f r
-                               in f l' r'
+                               in f l' r' -}
+
+reduce :: (a -> a -> a) -> a -> [a] -> a
+reduce f e [] = e
+reduce f e [x] = f e x
+reduce f e ls = f e (reduce_aux ls)
+                  where
+                    reduce_aux [x] = x 
+                    reduce_aux (x:y:xs) = let (result, red) = f x y ||| reduce_aux xs
+                                          in f result red
 
 
 scan :: (a -> a -> a) -> a -> [a] -> ([a], a)
@@ -107,5 +116,20 @@ reduccion f (x:y:xs) = res : (reduccion f (res:xs))
       where res = (f x y)
 
 
-fromList :: [a] -> [a] 
-fromList xs = xs
+instance Seq [] where
+  emptyS = empty
+  singletonS = singleton
+  lengthS = length
+  nthS = nth
+  tabulateS = tabulate
+  mapS = map
+  filterS = filter
+  appendS = append
+  takeS = take'
+  dropS = drop'
+  showtS = showt
+  showlS = showl
+  joinS = join
+  reduceS = reduce
+  scanS = scan
+  fromList = id
