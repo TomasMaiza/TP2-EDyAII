@@ -6,9 +6,6 @@ import Arr (Arr, (!), length, subArray, tabulate, empty, flatten)
 import Seq
 import Par
 
---empty':: Arr a 
---empty' = empty
-
 singleton :: a -> Arr a
 singleton x = A.fromList [x]
 
@@ -48,17 +45,71 @@ showl :: Arr a -> ListView a (Arr a)
 showl xs = case length xs of
             0 -> NIL
             _ -> CONS (xs ! 0) (drop' xs 1)
+{-
+reduce :: (a -> a -> a) -> a -> Arr a -> a
+reduce f e ls = case showt ls of 
+                  EMPTY -> e
+                  _ -> f e (reduce_aux ls)
+                        where
+                            reduce_aux s = case showt s of
+                                              ELT x -> x
+                                              NODE l r -> let (l', r') = reduce_aux l ||| reduce_aux r
+                                                          in f l' r'-}
+
+showt' :: Arr a -> TreeView a (Arr a)
+showt' xs = case length xs of
+            0 -> EMPTY
+            1 -> ELT (xs ! 0)
+            n -> NODE (take' xs tam) (drop' xs tam) where tam = 2 ^ ((floor . logBase 2) ((fromIntegral n)-1))
 
 reduce :: (a -> a -> a) -> a -> Arr a -> a
-reduce f e ls = case showl ls of
-                    NIL -> e
-                    CONS y empty -> f e y
-                    CONS y ys -> reduce_aux (CONS y ys)
-                                    where
-                                        reduce_aux :: ListView a (Arr a) -> a 
-                                        reduce_aux (CONS x empty) = x
-                                        reduce_aux (CONS x xs) = let (result, rest) = f x ||| reduce_aux xs
-                                                                 in reduce_aux (CONS result rest) 
+reduce f e ls = case showt' ls of 
+                  EMPTY -> e
+                  _ -> f e (reduce_aux ls)
+                        where
+                            reduce_aux s = case showt' s of
+                                              ELT x -> x
+                                              NODE l r -> let (l', r') = reduce_aux l ||| reduce_aux r
+                                                          in f l' r'
+
+
+scan :: (a -> a -> a) -> a -> Arr a -> (Arr a, a)
+scan f e s = let (ys, total) = scanAux f e s
+                 sec = completar f s ys 0
+             in (sec, total)
+              where
+                completar f xs ys i | length xs == 0 || length ys == 0 = empty
+                                    | otherwise = case even i of
+                                                    True -> append (singleton (ys ! 0)) (completar f xs ys (i + 1))
+                                                    False -> if length xs == 1 then empty else append (singleton (f (ys ! 0) (xs ! 0))) (completar f (drop' xs 2) (drop' ys 1) (i + 1))
+
+scanAux :: (a -> a -> a) -> a -> Arr a -> (Arr a, a)
+scanAux f e s = let e' = singleton e
+                    sec = (reduccion f (append e'(append e' (contraccion f s))))
+                    len = length sec
+                    (secFinal, total) = (take' sec (len - 1)) ||| nth sec (len - 1)
+                in (secFinal, total)
+
+contraccion :: (a -> a -> a) -> Arr a -> Arr a            
+contraccion f ls = case length ls of
+                    0 -> empty
+                    1 -> ls
+                    _ -> let (x, y) = ls ! 0 ||| ls ! 1
+                             xs = drop' ls 2
+                             op = f x y
+                             (sing, ys) = singleton op ||| contraccion f xs
+                         in append sing ys
+
+reduccion :: (a -> a -> a) -> Arr a -> Arr a
+reduccion f ls = case length ls of
+                    0 -> empty
+                    1 -> ls
+                    _ -> let (x, y) = ls ! 0 ||| ls ! 1
+                             xs = drop' ls 2
+                             sing = singleton (f x y)
+                             ys = append sing xs
+                             red = reduccion f ys
+                         in append sing red
 
 
 instance Seq Arr where
@@ -76,8 +127,8 @@ instance Seq Arr where
   showlS   = showl
   joinS    = flatten
   reduceS  = reduce
-  scanS    = undefined
-  fromList = undefined
+  scanS    = scan
+  fromList = A.fromList
 
 
 

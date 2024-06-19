@@ -77,11 +77,14 @@ reduce f e xs = f e (reduceT f (toTree xs))
 reduce :: (a -> a -> a) -> a -> [a] -> a
 reduce f e [] = e
 reduce f e [x] = f e x
-reduce f e ls = f e (reduce_aux ls)
+reduce f e ls = let red = reduce_aux ls
+                in case length red of 
+                    1 -> f e (head red)
+                    _ -> reduce f e red
                   where
-                    reduce_aux [x] = x 
-                    reduce_aux (x:y:xs) = let (result, red) = f x y ||| reduce_aux xs
-                                          in f result red
+                    reduce_aux [] = []
+                    reduce_aux [x] = [x] 
+                    reduce_aux (x:y:xs) = (f x y) : (reduce_aux xs)
 
 
 scan :: (a -> a -> a) -> a -> [a] -> ([a], a)
