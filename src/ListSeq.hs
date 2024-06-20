@@ -65,14 +65,14 @@ reduce :: (a -> a -> a) -> a -> [a] -> a
 reduce f e [] = e
 reduce f e [x] = f e x
 reduce f e ls = let red = reduce_aux ls
-                in case length red of 
-                    1 -> f e (head red)
-                    _ -> reduce f e red
+                in reduce_aux2 red
                   where
                     reduce_aux [] = []
                     reduce_aux [x] = [x] 
                     reduce_aux (x:y:xs) = let (op, reduc) = (f x y) ||| (reduce_aux xs)
                                           in op : reduc
+                    reduce_aux2 [x] = f e x
+                    reduce_aux2 xs = reduce f e xs
 
 
 scan :: (a -> a -> a) -> a -> [a] -> ([a], a)
